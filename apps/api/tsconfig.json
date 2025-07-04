@@ -1,0 +1,21 @@
+{
+  "extends": "@karaokems/typescript-config/base.json",
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "lib": [
+      "ESNext"
+    ],
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/api/*": [
+        "./src/*"
+      ],
+      "@/prisma/*": [
+        "./prisma/*"
+      ]
+    }
+  },
+}

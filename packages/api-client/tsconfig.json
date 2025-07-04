@@ -1,0 +1,41 @@
+{
+  "extends": "@karaokems/typescript-config/base.json",
+  "compilerOptions": {
+    "strict": true,
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "rootDir": "src",
+    "paths": {
+      "@/api/*": [
+        "../../apps/api/src/*"
+      ],
+      "@/prisma/*": [
+        "../../apps/api/prisma/*"
+      ]
+    },
+    "typeRoots": [
+      "./node_modules/@types",
+      "./node_modules/@cloudflare"
+    ],
+    "types": [
+      "workers-types/2023-07-01",
+      "node"
+    ],
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "dist"
+  },
+  "watchOptions": {
+    "excludeDirectories": [
+      "**/node_modules",
+      "**/packages/user-web"
+    ]
+  },
+  "include": [
+    "src"
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/styles/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@karaokems/ui/components",
+    "utils": "@karaokems/ui/lib/utils",
+    "ui": "@karaokems/ui/base-ui",
+    "lib": "@karaokems/ui/lib",
+    "hooks": "@karaokems/ui/hooks"
+  },
+  "iconLibrary": "lucide"
+}

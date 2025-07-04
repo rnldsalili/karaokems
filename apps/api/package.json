@@ -1,0 +1,28 @@
+{
+  "name": "@karaokems/api",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "dev": "pnpm run cf-typegen && wrangler dev",
+    "deploy": "wrangler deploy --minify",
+    "test": "vitest run"
+  },
+  "exports": {
+    "./routes": "./src/routes/index.ts"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "^0.5.0",
+    "date-fns": "^4.1.0",
+    "hono": "^4.7.10",
+    "zod": "^3.25.28"
+  },
+  "devDependencies": {
+    "@karaokems/enums": "workspace:*",
+    "@karaokems/eslint-config": "workspace:*",
+    "@karaokems/typescript-config": "workspace:*",
+    "@karaokems/validators": "workspace:*",
+    "@types/node": "^22.15.21",
+    "wrangler": "^4.16.1"
+  }
+}

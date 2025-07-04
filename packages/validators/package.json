@@ -1,0 +1,16 @@
+{
+  "name": "@karaokems/validators",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@karaokems/enums": "workspace:*",
+    "zod": "^3.25.72"
+  },
+  "devDependencies": {
+    "@karaokems/eslint-config": "workspace:*",
+    "@karaokems/typescript-config": "workspace:*"
+  }
+}

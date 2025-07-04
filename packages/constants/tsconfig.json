@@ -1,0 +1,15 @@
+{
+    "extends": "@karaokems/typescript-config/base.json",
+    "compilerOptions": {
+        "target": "ESNext",
+        "lib": [
+            "ESNext"
+        ],
+        "baseUrl": ".",
+        "paths": {
+            "@karaokems/constants/*": [
+                "./src/*"
+            ]
+        }
+    }
+}

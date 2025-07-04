@@ -1,0 +1,16 @@
+{
+  "extends": "@karaokems/typescript-config/base.json",
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": [
+      "ESNext",
+      "dom"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@karaokems/validators/*": [
+        "./src/*"
+      ]
+    }
+  },
+}

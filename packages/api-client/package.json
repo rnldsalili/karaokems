@@ -1,0 +1,25 @@
+{
+  "name": "@karaokems/api-client",
+  "type": "module",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "set API_BASE_URL=http://localhost:3000 && tsc --watch",
+    "build": "tsc",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@karaokems/api": "workspace:*",
+    "ky": "^1.8.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250704.0",
+    "@karaokems/eslint-config": "workspace:*",
+    "@karaokems/typescript-config": "workspace:*",
+    "@types/node": "^24.0.10"
+  },
+  "peerDependencies": {
+    "hono": ">=4.8.0"
+  }
+}

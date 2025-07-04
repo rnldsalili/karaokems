@@ -1,0 +1,12 @@
+{
+  "name": "@karaokems/enums",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "devDependencies": {
+    "@karaokems/eslint-config": "workspace:*",
+    "@karaokems/typescript-config": "workspace:*"
+  }
+}

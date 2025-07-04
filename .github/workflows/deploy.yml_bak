@@ -1,0 +1,199 @@
+name: Deploy to Production
+
+on:
+    push:
+        branches: [main]
+
+env:
+    NODE_VERSION: 22
+    PNPM_VERSION: 10.12.1
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+        name: Deploy to Production Environment
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Detect changes
+              uses: dorny/paths-filter@v3
+              id: changes
+              with:
+                  filters: |
+                      karaokems:
+                        - 'apps/karaokems/**'
+                        - 'packages/**'
+                        - 'pnpm-lock.yaml'
+                        - 'package.json'
+                      shared:
+                        - 'packages/**'
+                        - 'pnpm-lock.yaml'
+                        - 'package.json'
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+
+            - name: Setup PNPM
+              uses: pnpm/action-setup@v4
+              with:
+                  version: ${{ env.PNPM_VERSION }}
+
+            - name: Get PNPM store directory
+              shell: bash
+              run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+            - name: Cache PNPM store
+              uses: actions/cache@v4
+              with:
+                  path: ${{ env.STORE_PATH }}
+                  key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+                  restore-keys: |
+                      ${{ runner.os }}-pnpm-store-
+
+            - name: Install dependencies
+              if: steps.changes.outputs.karaokems == 'true' || steps.changes.outputs.shared == 'true'
+              run: pnpm install --frozen-lockfile
+
+            - name: Configure deployments
+              if: steps.changes.outputs.karaokems == 'true'
+              run: |
+                  cat > configure-deployments.ts << 'EOF'
+                  import { writeFileSync, readFileSync } from 'fs';
+                  import { join } from 'path';
+
+                  interface WranglerConfig {
+                    name: string;
+                    vars?: Record<string, any>;
+                    routes: Array<{ pattern: string; custom_domain: boolean }>;
+                    kv_namespaces?: Array<{ binding: string; id: string }>;
+                    d1_databases?: Array<{ binding: string; database_name: string; database_id: string }>;
+                  }
+
+                  const configs = {
+                    karaokems: {
+                      path: 'apps/karaokems/wrangler.json',
+                      name: 'karaokems-karaokems-production',
+                      route: 'ronald.it.com',
+                      route2: 'www.ronald.it.com'
+                    },
+                  };
+
+                  const hasChanges = {
+                    karaokems: process.env.portfolio_CHANGED === 'true'
+                  };
+
+                  // Configure simple apps (karaokems)
+                  for (const [key, { path, name, route, route2 }] of Object.entries(configs).slice(0, 2)) {
+                    const appKey = key === 'karaokems' ? 'karaokems' : key;
+                    if (hasChanges[appKey]) {
+                      const config: WranglerConfig = JSON.parse(readFileSync(path, 'utf-8'));
+                      config.name = name;
+                      config.routes.push({ pattern: route, custom_domain: true });
+
+                      if (route2) {
+                        config.routes.push({ pattern: route2, custom_domain: true });
+                      }
+
+                      writeFileSync(path, JSON.stringify(config, null, 2));
+                    }
+                  }
+
+                  EOF
+
+                  npx tsx configure-deployments.ts
+              env:
+                  portfolio_CHANGED: ${{ steps.changes.outputs.karaokems }}
+
+            - name: Generate sitemap
+              if: steps.changes.outputs.karaokems == 'true' ||  steps.changes.outputs.shared == 'true'
+              working-directory: apps/karaokems
+              run: pnpm run generate:sitemap
+              continue-on-error: true
+
+            - name: Build applications
+              if: steps.changes.outputs.karaokems == 'true' ||  steps.changes.outputs.shared == 'true'
+              run: |
+                  # Build only changed apps
+                  JOBS=()
+
+                  if [[ "${{ steps.changes.outputs.karaokems || steps.changes.outputs.shared }}" == "true" ]]; then
+                    echo "🔨 Building karaokems..."
+                    pnpm run build --filter=@karaokems/karaokems
+                    JOBS+=($!)
+                  fi
+
+                  for job in "${JOBS[@]}"; do
+                    wait $job
+                  done
+
+            - name: Deploy frontend applications
+              if: steps.changes.outputs.karaokems == 'true' || steps.changes.outputs.shared == 'true'
+              env:
+                  CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+                  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+              run: |
+                  # Deploy changed apps in parallel
+                  JOBS=()
+
+                  if [[ "${{ steps.changes.outputs.karaokems }}" == "true" ]]; then
+                    echo "🚀 Deploying karaokems app..."
+                    (cd apps/karaokems && pnpm run deploy) &
+                    JOBS+=($!)
+                  fi
+
+                  # Wait for all jobs to complete
+                  for job in "${JOBS[@]}"; do
+                    wait $job
+                  done
+
+            - name: Install Lighthouse CI
+              if: steps.changes.outputs.karaokems == 'true' || steps.changes.outputs.shared == 'true'
+              run: pnpm install -g @lhci/cli@0.15.x
+
+            - name: Run Lighthouse CI
+              if: steps.changes.outputs.karaokems == 'true' || steps.changes.outputs.shared == 'true'
+              run: sleep 5 && lhci autorun --upload.target=temporary-public-storage
+              continue-on-error: true
+              env:
+                  LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+            - name: Upload Lighthouse results
+              uses: actions/upload-artifact@v4
+              if: always()
+              with:
+                  name: lighthouse-results
+                  path: |
+                      .lighthouseci/
+                      **/.lighthouseci/
+                  if-no-files-found: warn
+
+            - name: Deployment summary
+              if: steps.changes.outputs.karaokems == 'true' || steps.changes.outputs.shared == 'true'
+              run: |
+                  echo "✅ Deployment completed successfully!"
+                  echo ""
+                  echo "📦 **Deployed Components:**"
+
+
+                  if [[ "${{ steps.changes.outputs.karaokems || steps.changes.outputs.shared }}" == "true" ]]; then
+                    echo "  - 🏠 karaokems: https://ronald.it.com"
+                  fi
+
+                  echo ""
+                  echo "⏭️  **Skipped (no changes):**"
+
+                  if [[ "${{ steps.changes.outputs.karaokems || steps.changes.outputs.shared }}" != "true" ]]; then
+                    echo "  - 🏠 karaokems"
+                  fi
+
+            - name: No changes detected
+              if: steps.changes.outputs.karaokems != 'true' && steps.changes.outputs.shared != 'true'
+              run: |
+                  echo "🎯 No changes detected in any deployable apps"
+                  echo "✨ Workflow completed without deployments"
